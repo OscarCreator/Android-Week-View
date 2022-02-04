@@ -13,7 +13,10 @@ import android.view.View
 import android.widget.OverScroller
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator
+import java.util.*
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
@@ -61,7 +64,7 @@ class WeekView @JvmOverloads constructor(
     }
 
     private val verticalScroller = OverScroller(context)
-    private val horizontalScroller = OverScroller(context)
+    private val horizontalScroller = OverScroller(context, FastOutLinearInInterpolator())
 
     private val scaleDetector = ScaleGestureDetector(context, this)
     private val gestureDetector = GestureDetector(context, this)
@@ -73,13 +76,60 @@ class WeekView @JvmOverloads constructor(
     private var currentScrollDirection = Direction.NONE
     private var currentFlingDirection = Direction.NONE
 
+    private var currentWeek: Int
+    private var cacheWeekNumbers: Array<Int>
+    private var currentYear: Int
 
     init {
 
         setBackgroundColor(Color.DKGRAY)
+
+        val currentDate = Calendar.getInstance()
+
+        currentWeek = currentDate.get(Calendar.WEEK_OF_YEAR)
+        currentYear = currentDate.get(Calendar.YEAR)
+        currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
+        currentDate.add(Calendar.DAY_OF_MONTH, -8)
+        cacheWeekNumbers = 1.rangeTo(23).map {
+            currentDate.get(Calendar.DAY_OF_MONTH).also {
+                currentDate.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }.toTypedArray()
+
     }
 
     private fun getContentHeight(): Int = (hours * hourHeight * scale).toInt()
+
+    private fun recalculateWeek() {
+        val right = week * contentWidth + contentWidth / 2f
+        val left = week * contentWidth - contentWidth / 2f
+
+        if (scrollX > right) {
+            // right
+            week++
+            Log.d(TAG, "week++ -> $week")
+
+            updateWeekNumberCache()
+
+        } else if(scrollX < left) {
+            // left
+            week--
+            Log.d(TAG, "week-- -> $week")
+
+            updateWeekNumberCache()
+        }
+    }
+
+    private fun updateWeekNumberCache(currentDate: Calendar = Calendar.getInstance()) {
+        currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
+        currentDate.add(Calendar.WEEK_OF_YEAR, week)
+        currentDate.add(Calendar.DAY_OF_MONTH, -8)
+        cacheWeekNumbers = 1.rangeTo(23).map {
+            currentDate.get(Calendar.DAY_OF_MONTH).also {
+                currentDate.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }.toTypedArray()
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -108,7 +158,7 @@ class WeekView @JvmOverloads constructor(
             withTranslation(leftBarWidth.toFloat(), scrollY + topBarHeight - 20f) {
                 withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), height.toFloat()) {
                     for (i in 0..7) {
-                        val o = scrollX / (contentWidth / 7f).toInt()
+                        val o = floor(scrollX.toFloat() / (contentWidth / 7f))
                         val x = contentWidth / 7f * (i + o)
 
                         drawLine(x, 0f, x, height - topBarHeight + 20f, linePaint)
@@ -119,13 +169,15 @@ class WeekView @JvmOverloads constructor(
             withTranslation(leftBarWidth.toFloat(), scrollY.toFloat()) {
                 withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), topBarHeight.toFloat()) {
                     for (i in 0..8) {
-                        val o = scrollX / (contentWidth / 7f).toInt()
+                        val o = floor(scrollX.toFloat() / (contentWidth / 7f)).toInt()
+
+                        val dateNumber = cacheWeekNumbers[i + o - week * 7 + 9]
+
                         val x = contentWidth / 7f * (i + o)
-                        drawText((i + o).toString(), x - 100f, 100f, textPaint)
+                        drawText(dateNumber.toString(), x - 100f, 100f, textPaint)
                     }
                 }
             }
-            // TODO change week
 
 
             // stationary vertical line by left bar
@@ -209,14 +261,15 @@ class WeekView @JvmOverloads constructor(
                     )
 
                 } else {
-                    // recalculate week
-                    week = scrollX / contentWidth
                     // done
                     currentFlingDirection = Direction.NONE
                     Log.d(TAG, "Horizontal Scroller: DONE! week:$week")
                 }
             }
         }
+
+        // if scrolling or mid flinging then recalculate week
+        recalculateWeek()
 
     }
 
@@ -254,6 +307,8 @@ class WeekView @JvmOverloads constructor(
         // Stop all current motion
         verticalScroller.forceFinished(true)
         horizontalScroller.forceFinished(true)
+
+        currentFlingDirection = Direction.NONE
         return true
     }
 
@@ -374,7 +429,7 @@ class WeekView @JvmOverloads constructor(
     }
 
     private fun onTouchUp(e1: MotionEvent?) {
-        Log.d(TAG, "Touch up, resetting direction")
+        Log.d(TAG, "Touch up, resetting direction: sd: $currentScrollDirection, fd: $currentFlingDirection")
         currentScrollDirection = Direction.NONE
 
         if (currentFlingDirection == Direction.NONE) {
