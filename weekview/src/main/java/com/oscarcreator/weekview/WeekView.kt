@@ -188,6 +188,8 @@ class WeekView @JvmOverloads constructor(
             // top bar
             withTranslation(scrollX.toFloat(), scrollY.toFloat()) {
                 drawRect(0f, 0f, width.toFloat(), topBarHeight.toFloat(), topBarBackground)
+                // week number
+                drawText(currentWeek.toString(), (leftBarWidth / 2).toFloat(), 130f, textPaint)
             }
 
             // vertical lines
