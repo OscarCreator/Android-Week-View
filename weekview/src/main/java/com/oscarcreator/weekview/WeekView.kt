@@ -14,6 +14,7 @@ import android.widget.OverScroller
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.floor
@@ -45,7 +46,7 @@ class WeekView @JvmOverloads constructor(
     private var hourHeight = 100
     private val hours = 24
 
-    private val topBarHeight: Int = 200
+    private val topBarHeight: Int = 180
 
     // TODO update
     private var week = 0
@@ -56,11 +57,23 @@ class WeekView @JvmOverloads constructor(
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.LTGRAY
-        textSize = 50f
+        textSize = 55f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val weekCharacterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.LTGRAY
+        textSize = 34f
+        textAlign = Paint.Align.CENTER
     }
 
     private val topBarBackground = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.GRAY
+    }
+
+    private val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.LTGRAY
+        textSize = 36f
     }
 
     private val verticalScroller = OverScroller(context)
@@ -78,7 +91,10 @@ class WeekView @JvmOverloads constructor(
 
     private var currentWeek: Int
     private var cacheWeekNumbers: Array<Int>
+    private var cacheWeekCharacters: Array<String>
     private var currentYear: Int
+
+    private val simpleDateFormat = SimpleDateFormat("E", Locale.getDefault())
 
     init {
 
@@ -90,12 +106,19 @@ class WeekView @JvmOverloads constructor(
         currentYear = currentDate.get(Calendar.YEAR)
         currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
         currentDate.add(Calendar.DAY_OF_MONTH, -8)
+        val checkPointTime = currentDate.timeInMillis
         cacheWeekNumbers = 1.rangeTo(23).map {
             currentDate.get(Calendar.DAY_OF_MONTH).also {
                 currentDate.add(Calendar.DAY_OF_MONTH, 1)
             }
         }.toTypedArray()
 
+        currentDate.timeInMillis = checkPointTime
+        cacheWeekCharacters = 1.rangeTo(23).map {
+            simpleDateFormat.format(currentDate.time)[0].toString().also {
+                currentDate.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }.toTypedArray()
     }
 
     private fun getContentHeight(): Int = (hours * hourHeight * scale).toInt()
@@ -117,15 +140,28 @@ class WeekView @JvmOverloads constructor(
             Log.d(TAG, "week-- -> $week")
 
             updateWeekNumberCache()
+            updateWeekCharacterCache()
         }
     }
 
     private fun updateWeekNumberCache(currentDate: Calendar = Calendar.getInstance()) {
         currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
         currentDate.add(Calendar.WEEK_OF_YEAR, week)
+        currentWeek = currentDate.get(Calendar.WEEK_OF_YEAR)
         currentDate.add(Calendar.DAY_OF_MONTH, -8)
         cacheWeekNumbers = 1.rangeTo(23).map {
             currentDate.get(Calendar.DAY_OF_MONTH).also {
+                currentDate.add(Calendar.DAY_OF_MONTH, 1)
+            }
+        }.toTypedArray()
+    }
+
+    private fun updateWeekCharacterCache(currentDate: Calendar = Calendar.getInstance()) {
+        currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
+        currentDate.add(Calendar.WEEK_OF_YEAR, week)
+        currentDate.add(Calendar.DAY_OF_MONTH, -8)
+        cacheWeekCharacters = 1.rangeTo(23).map {
+            simpleDateFormat.format(currentDate.time)[0].toString().also {
                 currentDate.add(Calendar.DAY_OF_MONTH, 1)
             }
         }.toTypedArray()
@@ -142,9 +178,9 @@ class WeekView @JvmOverloads constructor(
                     val y = i * hourHeight * scale
                     drawLine(leftBarWidth.toFloat() - 20, y, width.toFloat(), y, linePaint)
                     if (i < 10) {
-                        drawText("0$i:00", 5f, y, textPaint)
+                        drawText("0$i:00", 50f, y, timePaint)
                     } else {
-                        drawText("$i:00", 5f, y, textPaint)
+                        drawText("$i:00", 50f, y, timePaint)
                     }
                 }
             }
@@ -155,29 +191,9 @@ class WeekView @JvmOverloads constructor(
             }
 
             // vertical lines
-            withTranslation(leftBarWidth.toFloat(), scrollY + topBarHeight - 20f) {
-                withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), height.toFloat()) {
-                    for (i in 0..7) {
-                        val o = floor(scrollX.toFloat() / (contentWidth / 7f))
-                        val x = contentWidth / 7f * (i + o)
+            drawVerticalLines()
 
-                        drawLine(x, 0f, x, height - topBarHeight + 20f, linePaint)
-                    }
-                }
-            }
-
-            withTranslation(leftBarWidth.toFloat(), scrollY.toFloat()) {
-                withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), topBarHeight.toFloat()) {
-                    for (i in 0..8) {
-                        val o = floor(scrollX.toFloat() / (contentWidth / 7f)).toInt()
-
-                        val dateNumber = cacheWeekNumbers[i + o - week * 7 + 9]
-
-                        val x = contentWidth / 7f * (i + o)
-                        drawText(dateNumber.toString(), x - 100f, 100f, textPaint)
-                    }
-                }
-            }
+            drawDateNumbers()
 
 
             // stationary vertical line by left bar
@@ -188,6 +204,40 @@ class WeekView @JvmOverloads constructor(
 
         }
 
+    }
+
+    /**
+     * Draws the vertical lines which separate the days of the week.
+     * */
+    private fun Canvas.drawVerticalLines() {
+        withTranslation(leftBarWidth.toFloat(), scrollY + topBarHeight - 30f) {
+            withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), height.toFloat()) {
+                for (i in 0..7) {
+                    val o = floor(scrollX.toFloat() / (contentWidth / 7f))
+                    val x = contentWidth / 7f * (i + o)
+
+                    drawLine(x, 0f, x, height - topBarHeight + 30f, linePaint)
+                }
+            }
+        }
+    }
+
+    /**
+     * Draws the date numbers with a character corresponding to the day of the week.
+     * */
+    private fun Canvas.drawDateNumbers() {
+        withTranslation(leftBarWidth.toFloat(), scrollY.toFloat()) {
+            withClip(scrollX.toFloat(), 0f, contentWidth + scrollX.toFloat(), topBarHeight.toFloat()) {
+                for (i in 0..8) {
+                    val o = floor(scrollX.toFloat() / (contentWidth / 7f)).toInt()
+                    val index = i + o - week * 7 + 7
+
+                    val x = contentWidth / 7f * (i + o)
+                    drawText(cacheWeekNumbers[index].toString(), x - (contentWidth / 7f) / 2f, 130f, textPaint)
+                    drawText(cacheWeekCharacters[index], x - (contentWidth / 7f) / 2f, 50f, weekCharacterPaint)
+                }
+            }
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
