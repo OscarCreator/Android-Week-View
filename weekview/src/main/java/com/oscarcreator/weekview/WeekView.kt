@@ -1,6 +1,9 @@
 package com.oscarcreator.weekview
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -76,6 +79,11 @@ class WeekView @JvmOverloads constructor(
         textSize = 36f
     }
 
+    private val currentTimeBarPaint = Paint().apply {
+        color = Color.BLACK
+        strokeWidth = 3f
+    }
+
     private val verticalScroller = OverScroller(context)
     private val horizontalScroller = OverScroller(context, FastOutLinearInInterpolator())
 
@@ -94,13 +102,27 @@ class WeekView @JvmOverloads constructor(
     private var cacheWeekCharacters: Array<String>
     private var currentYear: Int
 
+    private var currentTimeInMinutes: Int
+    private val minutesInDay = 1440
+
+    private var currentDayInWeek: Int
+
     private val simpleDateFormat = SimpleDateFormat("E", Locale.getDefault())
+
+    private val broadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            onTimeChanged()
+        }
+    }
 
     init {
 
         setBackgroundColor(Color.DKGRAY)
 
         val currentDate = Calendar.getInstance()
+        var dayInWeekNumber = currentDate.get(Calendar.DAY_OF_WEEK) - 1
+        if (dayInWeekNumber == 0) dayInWeekNumber = 7
+        currentDayInWeek = dayInWeekNumber
 
         currentWeek = currentDate.get(Calendar.WEEK_OF_YEAR)
         currentYear = currentDate.get(Calendar.YEAR)
@@ -119,6 +141,8 @@ class WeekView @JvmOverloads constructor(
                 currentDate.add(Calendar.DAY_OF_MONTH, 1)
             }
         }.toTypedArray()
+
+        currentTimeInMinutes = getCurrentTimeInMinutes(currentDate)
     }
 
     private fun getContentHeight(): Int = (hours * hourHeight * scale).toInt()
@@ -167,6 +191,10 @@ class WeekView @JvmOverloads constructor(
         }.toTypedArray()
     }
 
+    private fun getCurrentTimeInMinutes(currentDate: Calendar = Calendar.getInstance()): Int {
+        return currentDate.get(Calendar.HOUR_OF_DAY) * 60 + currentDate.get(Calendar.MINUTE)
+    }
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
@@ -202,6 +230,9 @@ class WeekView @JvmOverloads constructor(
             withTranslation((scrollX + leftBarWidth).toFloat(), scrollY + topBarHeight - 20f) {
                 drawLine(0f, 0f, 0f, height - topBarHeight + 20f, linePaint)
             }
+
+            // time bar
+            drawCurrentTimeBar()
 
 
         }
@@ -240,6 +271,60 @@ class WeekView @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    private fun Canvas.drawCurrentTimeBar() {
+        withTranslation(leftBarWidth.toFloat(), topBarHeight.toFloat()) {
+            val maxHeight = hourHeight * scale * hours
+            val timeBarHeightFraction = currentTimeInMinutes.toFloat() / minutesInDay
+
+            val displayHeight = maxHeight * timeBarHeightFraction
+
+            val barWidth = contentWidth / 7f
+            val startX = contentWidth / 7f * (currentDayInWeek - 1)
+            withClip(scrollX.toFloat(), scrollY.toFloat(), scrollX + contentWidth.toFloat(), hourHeight * scale * hours) {
+
+                drawLine(startX, displayHeight, startX + barWidth, displayHeight, currentTimeBarPaint)
+            }
+
+            withClip(scrollX.toFloat() - 15f, scrollY.toFloat(), scrollX + contentWidth.toFloat(), hourHeight * scale * hours) {
+                val barFraction = (scrollX - startX) / barWidth
+                if (barFraction > 0) {
+                    if (barFraction in 0.0..1.0) {
+                        // radius can be from 0.2 * 15 = 3f = strokeWidth to 1 * 15f = full radius
+                        drawCircle(startX + scrollX, displayHeight, 15f * (1 - ((barFraction + 0.2f) / 1.2f)), currentTimeBarPaint)
+                    }
+                    // if barFraction is over 1 then it's outside of the window
+
+                } else if (-scrollX < contentWidth) {
+                    // draw full circle if not small circle is drawn and is on first page
+                    drawCircle(startX, displayHeight, 15f, currentTimeBarPaint)
+                }
+            }
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        val filter = IntentFilter(Intent.ACTION_TIME_TICK)
+        context.registerReceiver(broadcastReceiver, filter)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        context.unregisterReceiver(broadcastReceiver)
+    }
+
+    private fun onTimeChanged() {
+        currentTimeInMinutes = getCurrentTimeInMinutes()
+
+        val currentDate = Calendar.getInstance()
+        var dayInWeekNumber = currentDate.get(Calendar.DAY_OF_WEEK) - 1
+        if (dayInWeekNumber == 0) dayInWeekNumber = 7
+        currentDayInWeek = dayInWeekNumber
+
+        invalidate()
     }
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
@@ -400,9 +485,6 @@ class WeekView @JvmOverloads constructor(
         velocityX: Float,
         velocityY: Float
     ): Boolean {
-
-        // TODO week should be the current most visible week
-
 
         val absVx = abs(velocityX)
         val absVy = abs(velocityY)
