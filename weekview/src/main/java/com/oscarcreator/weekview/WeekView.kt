@@ -84,6 +84,10 @@ class WeekView @JvmOverloads constructor(
         strokeWidth = 3f
     }
 
+    private val currentDayPaint = Paint().apply {
+        color = Color.BLUE
+    }
+
     private val verticalScroller = OverScroller(context)
     private val horizontalScroller = OverScroller(context, FastOutLinearInInterpolator())
 
@@ -106,6 +110,7 @@ class WeekView @JvmOverloads constructor(
     private val minutesInDay = 1440
 
     private var currentDayInWeek: Int
+    private val currentDayInMonth: Int
 
     private val simpleDateFormat = SimpleDateFormat("E", Locale.getDefault())
 
@@ -123,6 +128,8 @@ class WeekView @JvmOverloads constructor(
         var dayInWeekNumber = currentDate.get(Calendar.DAY_OF_WEEK) - 1
         if (dayInWeekNumber == 0) dayInWeekNumber = 7
         currentDayInWeek = dayInWeekNumber
+
+        currentDayInMonth = currentDate.get(Calendar.DAY_OF_MONTH)
 
         currentWeek = currentDate.get(Calendar.WEEK_OF_YEAR)
         currentYear = currentDate.get(Calendar.YEAR)
@@ -266,6 +273,11 @@ class WeekView @JvmOverloads constructor(
                     val index = i + o - week * 7 + 7
 
                     val x = contentWidth / 7f * (i + o)
+
+                    // if close to starting week and at correct day in month, draw circle
+                    if (week in -1..1 && cacheWeekNumbers[index] == currentDayInMonth) {
+                        drawCircle(x - (contentWidth / 7f) / 2f, 110f, 50f, currentDayPaint)
+                    }
                     drawText(cacheWeekNumbers[index].toString(), x - (contentWidth / 7f) / 2f, 130f, textPaint)
                     drawText(cacheWeekCharacters[index], x - (contentWidth / 7f) / 2f, 50f, weekCharacterPaint)
                 }
