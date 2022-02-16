@@ -7,6 +7,8 @@ import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
 import android.view.GestureDetector
@@ -88,6 +90,15 @@ class WeekView @JvmOverloads constructor(
         color = Color.BLUE
     }
 
+    private val eventPaint = Paint().apply {
+        color = Color.GREEN
+    }
+
+    private val eventTextPaint = TextPaint().apply {
+        textSize = 30f
+        color = Color.BLACK
+    }
+
     private val verticalScroller = OverScroller(context)
     private val horizontalScroller = OverScroller(context, FastOutLinearInInterpolator())
 
@@ -119,6 +130,10 @@ class WeekView @JvmOverloads constructor(
             onTimeChanged()
         }
     }
+
+    // TODO have events loading from a (loader) where I can ask for events in a timeframe,
+    //  should load like 1 week at a time
+    private val events: List<EventRect> = listOf(EventRect("This is an event with a very long title and it may not draw the whole text", 0f, 125.7f, 600f, 70f))
 
     init {
 
@@ -238,12 +253,34 @@ class WeekView @JvmOverloads constructor(
                 drawLine(0f, 0f, 0f, height - topBarHeight + 20f, linePaint)
             }
 
+            // draw events
+            drawEvents()
+
             // time bar
             drawCurrentTimeBar()
 
 
         }
 
+    }
+
+    private fun Canvas.drawEvents() {
+        withTranslation(leftBarWidth.toFloat(), topBarHeight.toFloat()) {
+            withClip(scrollX.toFloat(), scrollY.toFloat(), scrollX.toFloat() + contentWidth, scrollY.toFloat() + hourHeight * scale * hours) {
+                for (event in events) {
+                    drawRoundRect(event.left, event.top * scale, event.left + event.width, (event.top + event.height) * scale, 5f, 5f, eventPaint)
+                    val eventText = StaticLayout.Builder
+                        .obtain(event.title, 0, event.title.length, eventTextPaint, (contentWidth / 7f).toInt())
+                        .setMaxLines(2)
+                        .build()
+                    withClip(event.left, event.top * scale, event.left + event.width, (event.top + event.height) * scale) {
+                        withTranslation(event.left, event.top * scale) {
+                            eventText.draw(this)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -338,6 +375,16 @@ class WeekView @JvmOverloads constructor(
 
         invalidate()
     }
+
+    private data class EventRect(
+        val title: String,
+        val left: Float,
+        val width: Float,
+        val top: Float,
+        val height: Float,
+    )
+
+
 
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         scaleDetector.onTouchEvent(event)
