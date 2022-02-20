@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.RectF
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
@@ -20,6 +21,7 @@ import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator
 import java.text.SimpleDateFormat
+import java.time.Duration
 import java.util.*
 import kotlin.math.abs
 import kotlin.math.floor
@@ -117,6 +119,9 @@ class WeekView @JvmOverloads constructor(
     private var cacheWeekCharacters: Array<String>
     private var currentYear: Int
 
+    private val startYear: Int
+    private val startWeek: Int
+
     private var currentTimeInMinutes: Int
     private val minutesInDay = 1440
 
@@ -131,9 +136,7 @@ class WeekView @JvmOverloads constructor(
         }
     }
 
-    // TODO have events loading from a (loader) where I can ask for events in a timeframe,
-    //  should load like 1 week at a time
-    private val events: List<EventRect> = listOf(EventRect("This is an event with a very long title and it may not draw the whole text", 0f, 125.7f, 600f, 70f))
+    private var eventCache: List<EventRect> = emptyList()
 
     init {
 
@@ -147,7 +150,9 @@ class WeekView @JvmOverloads constructor(
         currentDayInMonth = currentDate.get(Calendar.DAY_OF_MONTH)
 
         currentWeek = currentDate.get(Calendar.WEEK_OF_YEAR)
+        startWeek = currentWeek
         currentYear = currentDate.get(Calendar.YEAR)
+        startYear = currentYear
         currentDate.set(Calendar.DAY_OF_WEEK, currentDate.firstDayOfWeek)
         currentDate.add(Calendar.DAY_OF_MONTH, -8)
         val checkPointTime = currentDate.timeInMillis
@@ -264,17 +269,23 @@ class WeekView @JvmOverloads constructor(
 
     }
 
+    /**
+     * Draws all the events in the cache
+     * */
     private fun Canvas.drawEvents() {
         withTranslation(leftBarWidth.toFloat(), topBarHeight.toFloat()) {
             withClip(scrollX.toFloat(), scrollY.toFloat(), scrollX.toFloat() + contentWidth, scrollY.toFloat() + hourHeight * scale * hours) {
-                for (event in events) {
-                    drawRoundRect(event.left, event.top * scale, event.left + event.width, (event.top + event.height) * scale, 5f, 5f, eventPaint)
+                val dayWidth = contentWidth / 7f
+                for (event in eventCache) {
+
+                    drawRoundRect(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale, event.rect.right * dayWidth, event.rect.bottom * hourHeight * hours * scale, 5f, 5f, eventPaint)
+
                     val eventText = StaticLayout.Builder
-                        .obtain(event.title, 0, event.title.length, eventTextPaint, (contentWidth / 7f).toInt())
+                        .obtain(event.text, 0, event.text.length, eventTextPaint, (contentWidth / 7f).toInt())
                         .setMaxLines(2)
                         .build()
-                    withClip(event.left, event.top * scale, event.left + event.width, (event.top + event.height) * scale) {
-                        withTranslation(event.left, event.top * scale) {
+                    withClip(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale, event.rect.right * dayWidth, event.rect.bottom * hourHeight * hours * scale) {
+                        withTranslation(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale) {
                             eventText.draw(this)
                         }
                     }
@@ -376,13 +387,38 @@ class WeekView @JvmOverloads constructor(
         invalidate()
     }
 
-    private data class EventRect(
-        val title: String,
-        val left: Float,
-        val width: Float,
-        val top: Float,
-        val height: Float,
+    data class WeekViewEvent(
+        /** Start time of event */
+        val startTime: Calendar,
+        /** Duration of event in minutes */
+        val duration: Float,
+        /** Text to display inside event */
+        val text: String = ""
     )
+
+    private class EventRect(
+        /** Text to display on event */
+        val text: String,
+        /** Unified square for drawing */
+        val rect: RectF
+    )
+
+    fun addEvents(events: List<WeekViewEvent>) {
+        val startCalendar = Calendar.getInstance()
+        startCalendar.clear()
+        startCalendar.set(Calendar.YEAR, startYear)
+        startCalendar.set(Calendar.WEEK_OF_YEAR, startWeek)
+        val eventRects = events.map {
+            val days = Duration.between(startCalendar.toInstant(), it.startTime.toInstant()).toDays()
+
+            val timeInMinutes = getCurrentTimeInMinutes(it.startTime).toFloat()
+            val eventStart = timeInMinutes / minutesInDay
+            val eventEnd = (timeInMinutes + it.duration) / minutesInDay
+
+            EventRect(it.text, RectF(days.toFloat(), eventStart, ((days + 1).toFloat()), eventEnd))
+        }
+        eventCache = eventRects
+    }
 
 
 
