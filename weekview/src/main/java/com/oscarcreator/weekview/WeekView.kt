@@ -352,7 +352,7 @@ class WeekView @JvmOverloads constructor(
                 if (barFraction > 0) {
                     if (barFraction in 0.0..1.0) {
                         // radius can be from 0.2 * 15 = 3f = strokeWidth to 1 * 15f = full radius
-                        drawCircle(startX + scrollX, displayHeight, 15f * (1 - ((barFraction + 0.2f) / 1.2f)), currentTimeBarPaint)
+                        drawCircle(scrollX.toFloat(), displayHeight, 15f * (1 - ((barFraction + 0.2f) / 1.2f)), currentTimeBarPaint)
                     }
                     // if barFraction is over 1 then it's outside of the window
 
