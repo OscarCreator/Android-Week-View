@@ -277,15 +277,22 @@ class WeekView @JvmOverloads constructor(
             withClip(scrollX.toFloat(), scrollY.toFloat(), scrollX.toFloat() + contentWidth, scrollY.toFloat() + hourHeight * scale * hours) {
                 val dayWidth = contentWidth / 7f
                 for (event in eventCache) {
+                    val partialWidth = dayWidth / event.eventWidth
 
-                    drawRoundRect(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale, event.rect.right * dayWidth, event.rect.bottom * hourHeight * hours * scale, 5f, 5f, eventPaint)
+                    drawRoundRect(event.startDay * dayWidth + event.eventWidthPosition * partialWidth,
+                        event.timeStart * hourHeight * hours * scale,
+                        event.startDay * dayWidth + (event.eventWidthPosition + 1) * partialWidth,
+                        event.timeEnd * hourHeight * hours * scale, 15f, 15f, eventPaint)
 
                     val eventText = StaticLayout.Builder
                         .obtain(event.text, 0, event.text.length, eventTextPaint, (contentWidth / 7f).toInt())
-                        .setMaxLines(2)
                         .build()
-                    withClip(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale, event.rect.right * dayWidth, event.rect.bottom * hourHeight * hours * scale) {
-                        withTranslation(event.rect.left * dayWidth, event.rect.top * hourHeight * hours * scale) {
+                    withClip(event.startDay * dayWidth + event.eventWidthPosition * partialWidth,
+                        event.timeStart * hourHeight * hours * scale,
+                        event.startDay * dayWidth + (event.eventWidthPosition + 1) * partialWidth,
+                        event.timeEnd * hourHeight * hours * scale) {
+                        withTranslation(event.startDay * dayWidth + event.eventWidthPosition * partialWidth,
+                            event.timeStart * hourHeight * hours * scale) {
                             eventText.draw(this)
                         }
                     }
@@ -397,25 +404,39 @@ class WeekView @JvmOverloads constructor(
     )
 
     private class EventRect(
-        /** Text to display on event */
+        /** Text to display on event.*/
         val text: String,
-        /** Unified square for drawing */
-        val rect: RectF
+        /** Quantity of days from current day.*/
+        val startDay: Int,
+        /** Time from start of day to start of event normalized.*/
+        val timeStart: Float,
+        /** Time from start of day to end of event normalized.*/
+        val timeEnd: Float,
+        var eventWidth: Int = 1,
+        var eventWidthPosition: Int = 0
     )
 
-    fun addEvents(events: List<WeekViewEvent>) {
+    fun setEvents(events: List<WeekViewEvent>) {
         val startCalendar = Calendar.getInstance()
         startCalendar.clear()
         startCalendar.set(Calendar.YEAR, startYear)
         startCalendar.set(Calendar.WEEK_OF_YEAR, startWeek)
-        val eventRects = events.map {
+        val eventRects = events.sortedBy { it.startTime.timeInMillis }.map {
+            // TODO only compare date to be able to remove this
+            // set time and date to have same time
+            startCalendar.timeInMillis = it.startTime.timeInMillis
+            // set start of view date
+            startCalendar.set(Calendar.YEAR, startYear)
+            startCalendar.set(Calendar.WEEK_OF_YEAR, startWeek)
+            startCalendar.set(Calendar.DAY_OF_WEEK, startCalendar.firstDayOfWeek)
+
             val days = Duration.between(startCalendar.toInstant(), it.startTime.toInstant()).toDays()
 
             val timeInMinutes = getCurrentTimeInMinutes(it.startTime).toFloat()
             val eventStart = timeInMinutes / minutesInDay
             val eventEnd = (timeInMinutes + it.duration) / minutesInDay
 
-            EventRect(it.text, RectF(days.toFloat(), eventStart, ((days + 1).toFloat()), eventEnd))
+            EventRect(it.text, days.toInt(), eventStart, eventEnd)
         }
         eventCache = eventRects
     }
