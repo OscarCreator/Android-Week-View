@@ -17,6 +17,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.OverScroller
+import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator
@@ -58,9 +59,7 @@ class WeekView @JvmOverloads constructor(
     // TODO update
     private var week = 0
 
-    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.LTGRAY
-    }
+    private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.LTGRAY
@@ -139,6 +138,10 @@ class WeekView @JvmOverloads constructor(
     private var eventCache: List<EventRect> = emptyList()
 
     init {
+
+        context.withStyledAttributes(attrs, R.styleable.WeekView) {
+            linePaint.color = getColor(R.styleable.WeekView_lineColor, Color.LTGRAY)
+        }
 
         setBackgroundColor(Color.DKGRAY)
 
