@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="WeekView">
+        <!-- Sets the color of the grid lines which divides hours and
+             days into rows and columns. -->
         <attr name="lineColor" format="color"/>
+        <!-- Sets the color of the bar which shows current time. -->
+        <attr name="timeBarColor" format="color" />
+        <!-- Sets the color of the top bar which both current week number and date numbers will be drawn on. -->
+        <attr name="topBarColor" format="color"/>
+        <!-- Sets the color of the time written out in numbers on the left bar. -->
+        <attr name="timeTextColor" format="color"/>
+        <!---->
+        <attr name="weekNumberColor" format="color"/>
+
+        <attr name="dateNumbersColor" format="color"/>
+        <attr name="selectedDateNumberColor" format="color"/>
+
+        <attr name="dateCharacterColor" format="color"/>
+        <attr name="selectedDateCharacterColor" format="color"/>
+
+        <attr name="selectedDateNumberBackgroundColor" format="color"/>
+
+        <attr name="eventBackgroundColor" format="color"/>
+        <attr name="eventTextColor" format="color"/>
+
     </declare-styleable>
 
 </resources>

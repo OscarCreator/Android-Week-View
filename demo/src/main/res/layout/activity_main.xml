@@ -11,6 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:lineColor="?attr/colorAccent"
+        app:timeBarColor="@color/black"
         />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

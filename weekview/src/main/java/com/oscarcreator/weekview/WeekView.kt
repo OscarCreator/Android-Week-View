@@ -7,7 +7,6 @@ import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RectF
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
@@ -17,6 +16,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.OverScroller
+import android.widget.TextView
 import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
@@ -67,37 +67,50 @@ class WeekView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
     }
 
-    private val weekCharacterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val weekNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.LTGRAY
-        textSize = 34f
+        textSize = 55f
         textAlign = Paint.Align.CENTER
     }
 
-    private val topBarBackground = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.GRAY
-    }
+    private val topBarBackground = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.LTGRAY
         textSize = 36f
     }
 
     private val currentTimeBarPaint = Paint().apply {
-        color = Color.BLACK
         strokeWidth = 3f
     }
 
-    private val currentDayPaint = Paint().apply {
-        color = Color.BLUE
-    }
+    private val selectedDateNumberBackgroundPaint = Paint()
 
-    private val eventPaint = Paint().apply {
+    private val eventBackgroundColor = Paint().apply {
         color = Color.GREEN
     }
 
     private val eventTextPaint = TextPaint().apply {
         textSize = 30f
-        color = Color.BLACK
+    }
+
+    private val dateNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 55f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val selectedDateNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 55f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val dateCharacterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 34f
+        textAlign = Paint.Align.CENTER
+    }
+
+    private val selectedDateCharacterPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = 34f
+        textAlign = Paint.Align.CENTER
     }
 
     private val verticalScroller = OverScroller(context)
@@ -141,6 +154,21 @@ class WeekView @JvmOverloads constructor(
 
         context.withStyledAttributes(attrs, R.styleable.WeekView) {
             linePaint.color = getColor(R.styleable.WeekView_lineColor, Color.LTGRAY)
+            currentTimeBarPaint.color = getColor(R.styleable.WeekView_timeBarColor, Color.BLACK)
+            topBarBackground.color = getColor(R.styleable.WeekView_topBarColor, Color.GRAY)
+            timePaint.color = getColor(R.styleable.WeekView_timeTextColor, Color.LTGRAY)
+            weekNumberPaint.color = getColor(R.styleable.WeekView_weekNumberColor, Color.LTGRAY)
+
+            dateNumberPaint.color = getColor(R.styleable.WeekView_dateNumbersColor, Color.LTGRAY)
+            selectedDateNumberPaint.color = getColor(R.styleable.WeekView_selectedDateNumberColor, Color.BLACK)
+
+            dateCharacterPaint.color = getColor(R.styleable.WeekView_dateCharacterColor, Color.LTGRAY)
+            selectedDateCharacterPaint.color = getColor(R.styleable.WeekView_selectedDateCharacterColor, Color.BLUE)
+
+            selectedDateNumberBackgroundPaint.color = getColor(R.styleable.WeekView_selectedDateNumberBackgroundColor, Color.MAGENTA)
+
+            eventBackgroundColor.color = getColor(R.styleable.WeekView_eventBackgroundColor, R.attr.colorOnSurface)
+            eventTextPaint.color = getColor(R.styleable.WeekView_eventTextColor, Color.BLACK)
         }
 
         setBackgroundColor(Color.DKGRAY)
@@ -247,7 +275,7 @@ class WeekView @JvmOverloads constructor(
             withTranslation(scrollX.toFloat(), scrollY.toFloat()) {
                 drawRect(0f, 0f, width.toFloat(), topBarHeight.toFloat(), topBarBackground)
                 // week number
-                drawText(currentWeek.toString(), (leftBarWidth / 2).toFloat(), 130f, textPaint)
+                drawText(currentWeek.toString(), (leftBarWidth / 2).toFloat(), 130f, weekNumberPaint)
             }
 
             // vertical lines
@@ -285,7 +313,7 @@ class WeekView @JvmOverloads constructor(
                     drawRoundRect(event.startDay * dayWidth + event.eventWidthPosition * partialWidth,
                         event.timeStart * hourHeight * hours * scale,
                         event.startDay * dayWidth + (event.eventWidthPosition + 1) * partialWidth,
-                        event.timeEnd * hourHeight * hours * scale, 15f, 15f, eventPaint)
+                        event.timeEnd * hourHeight * hours * scale, 15f, 15f, eventBackgroundColor)
 
                     val eventText = StaticLayout.Builder
                         .obtain(event.text, 0, event.text.length, eventTextPaint, (contentWidth / 7f).toInt())
@@ -334,10 +362,14 @@ class WeekView @JvmOverloads constructor(
 
                     // if close to starting week and at correct day in month, draw circle
                     if (week in -1..1 && cacheWeekNumbers[index] == currentDayInMonth) {
-                        drawCircle(x - (contentWidth / 7f) / 2f, 110f, 50f, currentDayPaint)
+                        drawCircle(x - (contentWidth / 7f) / 2f, 110f, 50f, selectedDateNumberBackgroundPaint)
+
+                        drawText(cacheWeekNumbers[index].toString(), x - (contentWidth / 7f) / 2f, 130f, selectedDateNumberPaint)
+                        drawText(cacheWeekCharacters[index], x - (contentWidth / 7f) / 2f, 50f, selectedDateCharacterPaint)
+                    } else {
+                        drawText(cacheWeekNumbers[index].toString(), x - (contentWidth / 7f) / 2f, 130f, dateNumberPaint)
+                        drawText(cacheWeekCharacters[index], x - (contentWidth / 7f) / 2f, 50f, dateCharacterPaint)
                     }
-                    drawText(cacheWeekNumbers[index].toString(), x - (contentWidth / 7f) / 2f, 130f, textPaint)
-                    drawText(cacheWeekCharacters[index], x - (contentWidth / 7f) / 2f, 50f, weekCharacterPaint)
                 }
             }
         }
