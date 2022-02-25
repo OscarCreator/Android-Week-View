@@ -12,5 +12,13 @@
         <!-- Status bar color. -->
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
+        <item name="weekViewStyle">@style/ThemeOverlay.WeekView</item>
+
+    </style>
+
+    <style name="ThemeOverlay.WeekView" parent="">
+        <item name="android:background">@color/dark_gray</item>
+        <item name="eventBackgroundColor">@color/purple_500</item>
+        <item name="eventTextColor">@color/white</item>
     </style>
 </resources>

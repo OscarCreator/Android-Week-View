@@ -11,16 +11,17 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.ScaleGestureDetector
-import android.view.View
+import android.view.*
 import android.widget.OverScroller
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.content.res.getColorOrThrow
 import androidx.core.content.withStyledAttributes
 import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import androidx.interpolator.view.animation.FastOutLinearInInterpolator
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.theme.overlay.MaterialThemeOverlay
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
@@ -32,7 +33,7 @@ import kotlin.math.min
 class WeekView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = R.attr.weekViewStyle
 ) : View(context, attrs, defStyleAttr),
     ScaleGestureDetector.OnScaleGestureListener,
     GestureDetector.OnGestureListener {
@@ -60,12 +61,6 @@ class WeekView @JvmOverloads constructor(
     private var week = 0
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG)
-
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.LTGRAY
-        textSize = 55f
-        textAlign = Paint.Align.CENTER
-    }
 
     private val weekNumberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.LTGRAY
@@ -152,26 +147,26 @@ class WeekView @JvmOverloads constructor(
 
     init {
 
-        context.withStyledAttributes(attrs, R.styleable.WeekView) {
-            linePaint.color = getColor(R.styleable.WeekView_lineColor, Color.LTGRAY)
-            currentTimeBarPaint.color = getColor(R.styleable.WeekView_timeBarColor, Color.BLACK)
-            topBarBackground.color = getColor(R.styleable.WeekView_topBarColor, Color.GRAY)
-            timePaint.color = getColor(R.styleable.WeekView_timeTextColor, Color.LTGRAY)
-            weekNumberPaint.color = getColor(R.styleable.WeekView_weekNumberColor, Color.LTGRAY)
+        ContextThemeWrapper(context, R.style.Widget_WeekView)
+            .withStyledAttributes(attrs, R.styleable.WeekView, defStyleAttr, R.style.Widget_WeekView) {
 
-            dateNumberPaint.color = getColor(R.styleable.WeekView_dateNumbersColor, Color.LTGRAY)
-            selectedDateNumberPaint.color = getColor(R.styleable.WeekView_selectedDateNumberColor, Color.BLACK)
+                linePaint.color = getColor(R.styleable.WeekView_lineColor, getContext().getColor(R.color.line_color))
+                currentTimeBarPaint.color = getColor(R.styleable.WeekView_timeBarColor, Color.BLACK)
+                topBarBackground.color = getColor(R.styleable.WeekView_topBarColor, R.attr.colorSurface)
+                timePaint.color = getColor(R.styleable.WeekView_timeTextColor, getContext().getColor(R.color.time_text_color))
+                weekNumberPaint.color = getColor(R.styleable.WeekView_weekNumberColor, R.attr.colorOnSurface)
 
-            dateCharacterPaint.color = getColor(R.styleable.WeekView_dateCharacterColor, Color.LTGRAY)
-            selectedDateCharacterPaint.color = getColor(R.styleable.WeekView_selectedDateCharacterColor, Color.BLUE)
+                dateNumberPaint.color = getColor(R.styleable.WeekView_dateNumbersColor, R.attr.colorOnSurface)
+                selectedDateNumberPaint.color = getColor(R.styleable.WeekView_selectedDateNumberColor, R.attr.colorOnPrimary)
 
-            selectedDateNumberBackgroundPaint.color = getColor(R.styleable.WeekView_selectedDateNumberBackgroundColor, Color.MAGENTA)
+                dateCharacterPaint.color = getColor(R.styleable.WeekView_dateCharacterColor, R.attr.colorOnSurface)
+                selectedDateCharacterPaint.color = getColor(R.styleable.WeekView_selectedDateCharacterColor, R.attr.colorPrimary)
 
-            eventBackgroundColor.color = getColor(R.styleable.WeekView_eventBackgroundColor, R.attr.colorOnSurface)
-            eventTextPaint.color = getColor(R.styleable.WeekView_eventTextColor, Color.BLACK)
-        }
+                selectedDateNumberBackgroundPaint.color = getColor(R.styleable.WeekView_selectedDateNumberBackgroundColor, R.attr.colorPrimary)
 
-        setBackgroundColor(Color.DKGRAY)
+                eventBackgroundColor.color = getColor(R.styleable.WeekView_eventBackgroundColor, R.attr.colorSecondary)
+                eventTextPaint.color = getColor(R.styleable.WeekView_eventTextColor, R.attr.colorOnSecondary)
+            }
 
         val currentDate = Calendar.getInstance()
         var dayInWeekNumber = currentDate.get(Calendar.DAY_OF_WEEK) - 1

@@ -25,5 +25,7 @@
         <attr name="eventTextColor" format="color"/>
 
     </declare-styleable>
-
+    <declare-styleable name="AppTheme">
+        <attr name="weekViewStyle" format="reference" />
+    </declare-styleable>
 </resources>

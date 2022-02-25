@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default values -->
+    <style name="Widget.WeekView" parent="" >
+        <item name="lineColor">@color/line_color</item>
+        <item name="timeBarColor">@android:color/black</item>
+        <item name="topBarColor">?attr/colorSurface</item>
+        <item name="timeTextColor">@color/time_text_color</item>
+        <item name="weekNumberColor">?attr/colorOnSurface</item>
+        <item name="dateNumbersColor">?attr/colorOnSurface</item>
+        <item name="selectedDateNumberColor">?attr/colorOnPrimary</item>
+        <item name="dateCharacterColor">?attr/colorOnSurface</item>
+        <item name="selectedDateCharacterColor">?attr/colorPrimary</item>
+        <item name="selectedDateNumberBackgroundColor">?attr/colorPrimary</item>
+        <item name="eventBackgroundColor">?attr/colorSecondary</item>
+        <item name="eventTextColor">?attr/colorOnSecondary</item>
+        <item name="android:background">?attr/colorSurface</item>
+    </style>
+</resources>
